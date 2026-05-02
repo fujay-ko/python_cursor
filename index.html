@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>🐍 Python 程式學習 — 27 題互動教材</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap');
+:root{
+  /* ── 深色主題（from index1） ── */
+  --bg:#0d1117; --surface:#161b22; --surface2:#1c2128; --surface3:#222834;
+  --border:#30363d; --border2:#3d444d;
+  --text:#e6edf3; --text2:#9198a1; --text3:#656d76;
+  --blue:#58a6ff; --green:#3fb950; --yellow:#d29922; --red:#f85149;
+  --purple:#a371f7; --cyan:#39c5cf; --orange:#f0883e;
+  /* 階段色 */
+  --c1:#9198a1; --c2:#a371f7; --c3:#3fb950; --c4:#d29922; --c5:#58a6ff; --c6:#f85149;
+  /* 填空色 */
+  --blank-bg:#1e2d40; --blank-border:#4a6480;
+  --blank-focus:#fcd34d; --blank-ok:#3fb950; --blank-err:#f85149;
+  --radius:8px; --radius-lg:12px;
+  --sidebar:220px; --topbar:48px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;font-size:14px;}
+
+/* ══════════════════════════════════
+   TOPBAR（index1 深色 + index2 sticky）
+══════════════════════════════════ */
+#topbar{height:var(--topbar);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:12px;position:sticky;top:0;z-index:200;}
+#topbar h1{font-size:15px;font-weight:700;display:flex;align-items:center;gap:6px;}
+#pyodide-status{font-size:11px;padding:2px 10px;border-radius:12px;border:1px solid var(--border2);color:var(--text2);}
+#pyodide-status.ready{color:var(--green);border-color:var(--green);}
+#pyodide-status.error{color:var(--red);border-color:var(--red);}
+#progress-stats{font-size:11px;color:var(--text3);margin-left:auto;}
+#topbar .sub{font-size:11px;color:var(--text3);}
+
+/* ── 頂部漸層進度條（from index1） ── */
+#progress-bar-wrap{background:var(--border);height:3px;position:sticky;top:var(--topbar);z-index:199;}
+#progress-bar{height:3px;background:linear-gradient(90deg,var(--green),var(--blue));width:0%;transition:width .4s;}
+
+/* ══════════════════════════════════
+   FILTER BAR（from index2）
+══════════════════════════════════ */
+#filter-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:8px 16px;display:flex;gap:6px;flex-wrap:wrap;position:sticky;top:calc(var(--topbar) + 3px);z-index:100;}
+.filter-btn{font-size:11px;padding:4px 12px;border-radius:99px;border:1px solid var(--border);background:transparent;cursor:pointer;color:var(--text2);transition:all .15s;font-family:'Noto Sans TC',sans-serif;}
+.filter-btn:hover{background:var(--surface2);color:var(--text);}
+.filter-btn.active{background:var(--blue);color:#000;border-color:var(--blue);font-weight:600;}
+
+/* ══════════════════════════════════
+   MAIN LAYOUT
+══════════════════════════════════ */
+#main{display:flex;min-height:calc(100vh - var(--topbar) - 3px);}
+
+/* ── SIDEBAR（深色風格） ── */
+#sidebar{width:var(--sidebar);border-right:1px solid var(--border);background:var(--surface);position:sticky;top:calc(var(--topbar) + 3px + 41px);height:calc(100vh - var(--topbar) - 3px - 41px);overflow-y:auto;flex-shrink:0;}
+#sidebar::-webkit-scrollbar{width:3px;}
+#sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+#sidebar-inner{padding:6px 0;}
+.sidebar-phase{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);padding:10px 14px 3px;}
+.sidebar-item{display:flex;align-items:center;gap:8px;padding:6px 14px;cursor:pointer;transition:background .12s;border-right:2px solid transparent;text-decoration:none;color:var(--text2);font-size:12px;}
+.sidebar-item:hover{background:var(--surface2);}
+.sidebar-item.active{background:rgba(88,166,255,.08);border-right-color:var(--blue);color:var(--blue);}
+.sidebar-item.completed .done-dot{background:var(--green)!important;}
+.sidebar-num{font-size:10px;color:var(--text3);min-width:20px;font-family:'JetBrains Mono',monospace;}
+.done-dot{width:6px;height:6px;border-radius:50%;background:var(--border2);flex-shrink:0;margin-left:auto;transition:background .2s;}
+
+/* ══════════════════════════════════
+   CONTENT AREA
+══════════════════════════════════ */
+#content{flex:1;max-width:820px;padding:20px;overflow-x:hidden;}
+
+/* ── 題目卡片（accordion，from index2） ── */
+.lesson-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:16px;overflow:hidden;scroll-margin-top:100px;}
+.lesson-card.hidden{display:none;}
+
+/* 題目標頭 */
+.lesson-header{padding:14px 16px;display:flex;align-items:center;gap:10px;cursor:pointer;border-bottom:1px solid transparent;transition:background .12s;}
+.lesson-header:hover{background:var(--surface2);}
+.lesson-header.open{border-bottom-color:var(--border);}
+.lesson-num{font-size:22px;font-weight:700;min-width:32px;font-family:'JetBrains Mono',monospace;}
+.lesson-info{flex:1;}
+.lesson-title{font-size:14px;font-weight:600;color:var(--text);}
+.lesson-meta{font-size:11px;color:var(--text2);}
+.expand-btn{font-size:11px;color:var(--text3);padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:transparent;cursor:pointer;transition:all .15s;font-family:'Noto Sans TC',sans-serif;}
+.expand-btn:hover{background:var(--surface2);color:var(--text);}
+.completed-badge{font-size:10px;padding:2px 8px;border-radius:99px;background:rgba(63,185,80,.12);color:var(--green);border:1px solid rgba(63,185,80,.3);margin-right:4px;display:none;font-family:'JetBrains Mono',monospace;}
+.lesson-card.completed .completed-badge{display:inline;}
+
+/* 題目本體 */
+.lesson-body{display:none;padding:0;}
+.lesson-body.open{display:block;}
+
+/* ══════════════════════════════════
+   TAB BAR（from index1）
+══════════════════════════════════ */
+.tab-bar{display:flex;gap:2px;margin:16px 16px 0;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:3px;}
+.tab-btn{flex:1;padding:7px 0;border:none;background:transparent;color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;border-radius:6px;transition:all .15s;font-family:'Noto Sans TC',sans-serif;display:flex;align-items:center;justify-content:center;gap:5px;}
+.tab-btn:hover{background:var(--surface3);color:var(--text);}
+.tab-btn.active{background:var(--surface3);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.4);}
+.tab-content{display:none;padding:16px;}
+.tab-content.active{display:block;}
+
+/* Section labels */
+.section-label{font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.05em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.step-badge{font-size:10px;padding:1px 8px;border-radius:99px;background:var(--surface3);color:var(--text);font-weight:700;border:1px solid var(--border2);}
+
+/* 概念說明 */
+.concept-text{font-size:13px;color:var(--text);line-height:1.85;white-space:pre-line;margin-bottom:10px;}
+.key-point-list{display:flex;flex-direction:column;gap:7px;}
+.key-point{background:var(--surface2);border-radius:var(--radius);padding:9px 12px;border-left:3px solid var(--border2);}
+.key-point-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:3px;}
+.key-point-body{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);line-height:1.75;white-space:pre-wrap;}
+
+/* ══════════════════════════════════
+   MAC-STYLE CODE CARD（from index1）
+══════════════════════════════════ */
+.code-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px;}
+.code-topbar{background:var(--surface2);border-bottom:1px solid var(--border);padding:7px 12px;display:flex;align-items:center;gap:6px;}
+.mac-dots{display:flex;gap:5px;}
+.mac-dot{width:10px;height:10px;border-radius:50%;}
+.mac-dot-r{background:#ff5f57;} .mac-dot-y{background:#febc2e;} .mac-dot-g{background:#28c840;}
+.code-fname{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text3);margin-left:4px;flex:1;}
+.code-actions{display:flex;gap:6px;margin-left:auto;}
+pre.code-display{font-family:'JetBrains Mono',monospace;font-size:12px;color:#adbac7;padding:14px;line-height:1.8;overflow-x:auto;white-space:pre;margin:0;}
+
+/* ── 輸出區（深色） ── */
+.output-wrap{background:#080d12;border-top:1px solid var(--border);}
+.output-header{padding:4px 12px;font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:5px;}
+.output-body{padding:9px 13px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.75;white-space:pre-wrap;word-break:break-all;min-height:38px;max-height:220px;overflow-y:auto;color:#7dd3fc;}
+.output-body.err{color:var(--red);}
+.output-body.ok{color:var(--green);}
+.output-body.empty{color:var(--text3);font-style:italic;}
+
+/* 提示框 */
+.hint-box{background:rgba(210,153,34,.08);border:1px solid rgba(210,153,34,.2);border-radius:6px;padding:7px 11px;font-size:12px;color:#d4a14a;margin-bottom:10px;}
+
+/* 輸入區 */
+.input-section{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;margin-bottom:10px;}
+.input-label{font-size:11px;color:var(--text2);margin-bottom:6px;}
+textarea.code-input{width:100%;font-family:'JetBrains Mono',monospace;font-size:12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;line-height:1.7;resize:vertical;min-height:60px;color:var(--text);outline:none;transition:border .15s;}
+textarea.code-input:focus{border-color:var(--blue);}
+textarea.challenge-editor{min-height:160px;background:var(--bg);}
+
+/* ══════════════════════════════════
+   FILL-IN BLANKS（from index1）
+══════════════════════════════════ */
+.skeleton-code{font-family:'JetBrains Mono',monospace;font-size:12px;color:#adbac7;padding:14px;line-height:1.8;white-space:pre-wrap;word-break:break-all;}
+.blank{display:inline-block;background:var(--blank-bg);border:1.5px dashed var(--blank-border);border-radius:4px;min-width:48px;padding:1px 7px;cursor:text;color:var(--blank-focus);font-family:'JetBrains Mono',monospace;font-size:12px;vertical-align:baseline;outline:none;position:relative;transition:border-color .15s,background .15s;line-height:1.6;}
+.blank:empty::before{content:'___';color:rgba(252,211,77,.35);pointer-events:none;}
+.blank:focus{border-style:solid;border-color:var(--blank-focus);background:#26341a;}
+.blank.correct{border-style:solid;border-color:var(--blank-ok);background:rgba(63,185,80,.1);color:var(--blank-ok);}
+.blank.wrong{border-style:solid;border-color:var(--blank-err);background:rgba(248,81,73,.1);color:var(--blank-err);}
+
+/* ══════════════════════════════════
+   HINT TOOLTIP（from index1）
+══════════════════════════════════ */
+.blank-wrap{display:inline-block;position:relative;vertical-align:baseline;}
+.hint-btn{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--surface3);border:1px solid var(--border2);font-size:9px;color:var(--text3);cursor:pointer;vertical-align:super;margin-left:2px;line-height:1;transition:all .12s;font-family:'JetBrains Mono',monospace;flex-shrink:0;}
+.hint-btn:hover{background:var(--yellow);border-color:var(--yellow);color:#000;}
+.hint-btn.shown{background:var(--yellow);border-color:var(--yellow);color:#000;}
+.hint-popup{display:none;position:absolute;bottom:calc(100% + 6px);left:0;background:#2d3340;border:1px solid var(--border2);border-radius:6px;padding:6px 10px;font-size:11px;color:var(--text);white-space:nowrap;z-index:500;box-shadow:0 4px 12px rgba(0,0,0,.4);font-family:'Noto Sans TC',sans-serif;pointer-events:none;}
+.hint-popup::after{content:'';position:absolute;top:100%;left:10px;border:5px solid transparent;border-top-color:#2d3340;}
+.hint-popup.show{display:block;}
+
+/* 按鈕 */
+.btn{font-size:12px;padding:6px 14px;border-radius:6px;border:none;cursor:pointer;font-family:'Noto Sans TC',sans-serif;font-weight:600;transition:all .15s;display:inline-flex;align-items:center;gap:5px;}
+.btn svg{width:11px;height:11px;fill:currentColor;}
+.btn-run{background:var(--green);color:#000;}
+.btn-run:hover{opacity:.85;}
+.btn-run:active{transform:scale(.97);}
+.btn-run:disabled{background:var(--border2);color:var(--text3);cursor:not-allowed;opacity:.7;}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text2);}
+.btn-ghost:hover{border-color:var(--text2);color:var(--text);}
+.btn-check{background:transparent;border:1px solid var(--yellow);color:var(--yellow);}
+.btn-check:hover{background:rgba(210,153,34,.1);}
+.btn-done{background:transparent;border:1px solid var(--green);color:var(--green);margin-left:auto;}
+.btn-done:hover{background:rgba(63,185,80,.1);}
+.btn-row{display:flex;gap:7px;align-items:center;margin-top:10px;}
+
+/* 檢查結果 */
+.check-result{padding:7px 11px;border-radius:6px;font-size:12px;display:none;margin-top:8px;}
+.check-ok{background:rgba(63,185,80,.1);border:1px solid rgba(63,185,80,.3);color:var(--green);}
+.check-warn{background:rgba(210,153,34,.1);border:1px solid rgba(210,153,34,.3);color:var(--yellow);}
+
+/* ══════════════════════════════════
+   LOADING SCREEN
+══════════════════════════════════ */
+#loading-screen{position:fixed;inset:0;background:rgba(13,17,23,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;gap:14px;}
+#loading-screen.hidden{display:none;}
+.loading-spinner{width:38px;height:38px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-title{font-size:18px;font-weight:700;color:var(--text);}
+.loading-sub{font-size:13px;color:var(--text2);text-align:center;}
+
+/* ══════════════════════════════════
+   RWD（from index1）
+══════════════════════════════════ */
+@media(max-width:680px){
+  #sidebar{display:none;}
+  #content{padding:12px;}
+  .filter-btn{font-size:10px;padding:3px 8px;}
+  .tab-btn{font-size:11px;}
+  .tab-bar{margin:12px 10px 0;}
+}
+</style>
+</head>
+<body>
+
+<!-- 載入畫面 -->
+<div id="loading-screen">
+  <div class="loading-spinner"></div>
+  <div class="loading-title">🐍 Python 程式學習教材</div>
+  <div class="loading-sub" id="loading-msg">正在初始化...（第一次約需 10-20 秒）</div>
+</div>
+
+<!-- 頂部 -->
+<div id="topbar">
+  <div>🐍</div>
+  <h1>Python 程式學習</h1>
+  <span id="progress-stats">0 / 27 完成</span>
+  <span id="pyodide-status">⏳ 載入中</span>
+  <span class="sub">共 27 題</span>
+</div>
+<!-- 漸層進度條 -->
+<div id="progress-bar-wrap"><div id="progress-bar"></div></div>
+
+<!-- 篩選欄 -->
+<div id="filter-bar">
+  <button class="filter-btn active" onclick="filterPhase('all',this)">全部 27</button>
+  <button class="filter-btn" onclick="filterPhase('第一階段：基本運算',this)">🔘 基本運算 4</button>
+  <button class="filter-btn" onclick="filterPhase('第二階段：條件判斷',this)">🟣 條件判斷 5</button>
+  <button class="filter-btn" onclick="filterPhase('第三階段：for 迴圈',this)">🟢 for 迴圈 5</button>
+  <button class="filter-btn" onclick="filterPhase('第四階段：while 迴圈',this)">🟡 while 迴圈 3</button>
+  <button class="filter-btn" onclick="filterPhase('第五階段：陣列',this)">🔵 陣列 5</button>
+  <button class="filter-btn" onclick="filterPhase('第六階段：進階整合',this)">🔴 進階整合 5</button>
+</div>
+
+<div id="main">
+  <div id="sidebar"><div id="sidebar-inner"></div></div>
+  <div id="content"><div id="lessons-wrap"></div></div>
+</div>
+
+<script>
+const LESSONS = [{"id": "01", "phase": "第一階段：基本運算", "phase_color": "#6B7280", "phase_bg": "#F3F4F6", "title": "梯形面積的計算", "source": "Go Class", "concept": "浮點數輸入、公式計算、格式化輸出", "concept_explain": "這題要學「公式計算」和「格式化輸出」。\n就像你在數學課算梯形面積，把數字套進公式就能算出答案。\n程式比數學多做一件事：把結果用固定格式印出來，小數點後剛好2位。", "key_points": [["梯形面積公式", "面積 = (上底 + 下底) × 高 ÷ 2\n注意括號！不加括號會先乘除，答案錯。"], ["格式化輸出", "f\"Area = {area:.2f}\"\n:.2f 代表「保留小數點後2位」"]], "trace_code": "# 追蹤版：看程式每一步\na = 5\nb = 11\nh = 9\n\nprint(f\"Upper base = {a}\")\nprint(f\"Lower base = {b}\")\nprint(f\"Height = {h}\")\n\narea = (a + b) * h / 2\nprint(f\"計算過程：({a} + {b}) × {h} ÷ 2 = {area}\")\nprint(f\"Area of trapezoid = {area:.2f}\")", "skeleton": "a = int(input())\nb = int(input())\nh = int(input())\n\narea = _______________\n\nprint(f\"Upper base = {a}\")\nprint(f\"Lower base = {b}\")\nprint(f\"Height = {h}\")\nprint(f\"Area of trapezoid = {area:.2f}\")", "skeleton_answers": ["(a + b) * h / 2"], "default_input": "5\n11\n9", "expected_output": "Upper base = 5\nLower base = 11\nHeight = 9\nArea of trapezoid = 72.00", "hint": "梯形面積 = (上底 + 下底) × 高 ÷ 2", "challenge_hint": "輸入三個數字（上底、下底、高），輸出帶標籤的面積\n測試：5 11 9 → Area of trapezoid = 72.00"}, {"id": "02", "phase": "第一階段：基本運算", "phase_color": "#6B7280", "phase_bg": "#F3F4F6", "title": "秒數換算", "source": "Go Class", "concept": "整除（//）、取餘數（%）、條件輸出", "concept_explain": "這題要學「整除」和「取餘數」！\n// 整除：765 // 3600 = 0（幾小時）\n% 取餘數：765 % 60 = 45（剩幾秒）\n如果某個單位是 0，就不輸出它。", "key_points": [["整除和取餘數", "// 整除：只取整數部分\n% 取餘數：除完剩下的"], ["0 不輸出", "if h > 0: result += f\"{h}H\"\n只有不是0才加進輸出字串"], ["結尾不換行", "print(result, end=\"\")"]], "trace_code": "total = 765\nh = total // 3600\nremain = total % 3600\nm = remain // 60\ns = remain % 60\n\nprint(f\"小時：{total} // 3600 = {h}\")\nprint(f\"剩餘：{total} % 3600 = {remain}\")\nprint(f\"分鐘：{remain} // 60 = {m}\")\nprint(f\"秒數：{remain} % 60 = {s}\")\n\nresult = \"\"\nif h > 0: result += f\"{h}H\"\nif m > 0: result += f\"{m}M\"\nif s > 0: result += f\"{s}S\"\nprint(f\"輸出：{result}\")", "skeleton": "total = int(input())\n\nh      = total ___ 3600\nremain = total ___ 3600\nm      = remain ___ 60\ns      = remain ___ 60\n\nresult = \"\"\nif h ___ 0: result += f\"{h}H\"\nif m ___ 0: result += f\"{m}M\"\nif s ___ 0: result += f\"{s}S\"\n\nprint(result, end=\"\")", "skeleton_answers": ["//", "%", "//", "%", "> ", "> ", "> "], "default_input": "765", "expected_output": "12M45S", "hint": "// 是整除，% 是取餘數，條件用 > 0", "challenge_hint": "測試：765→12M45S, 3600→1H, 3661→1H1M1S"}, {"id": "03", "phase": "第一階段：基本運算", "phase_color": "#6B7280", "phase_bg": "#F3F4F6", "title": "加減乘除商餘", "source": "社團練習", "concept": "四則運算、map(int, split())、格式化輸出", "concept_explain": "這題學六種運算：加(+)、減(-)、乘(*)、除(/)、商(//)、餘(%)\n還要學一行輸入兩個數字的寫法：\na, b = map(int, input().split())\n意思是：把一行輸入用空格切開，轉成整數，分別給 a 和 b。", "key_points": [["/ 和 // 的差別", "12 / 5  = 2.4（真正除法）\n12 // 5 = 2  （整除）"], ["一行輸入兩個數", "a, b = map(int, input().split())"]], "trace_code": "a = 12\nb = 5\n\nprint(f\"{a} + {b} = {a + b}\")\nprint(f\"{a} - {b} = {a - b}\")\nprint(f\"{a} * {b} = {a * b}\")\nprint(f\"{a} / {b} = {a / b}\")\nprint(f\"{a} // {b} = {a // b}\")\nprint(f\"{a} % {b} = {a % b}\")", "skeleton": "a, b = map(int, input().split())\n\nprint(f\"{a} + {b} = {___}\")\nprint(f\"{a} - {b} = {___}\")\nprint(f\"{a} * {b} = {___}\")\nprint(f\"{a} / {b} = {___}\")\nprint(f\"{a} // {b} = {___}\")\nprint(f\"{a} % {b} = {___}\")", "skeleton_answers": ["a + b", "a - b", "a * b", "a / b", "a // b", "a % b"], "default_input": "12 5", "expected_output": "12 + 5 = 17\n12 - 5 = 7\n12 * 5 = 60\n12 / 5 = 2.4\n12 // 5 = 2\n12 % 5 = 2", "hint": "把六種運算符號填進去，注意 / 和 // 的差別", "challenge_hint": "輸入兩個數字，輸出六種運算結果"}, {"id": "04", "phase": "第一階段：基本運算", "phase_color": "#6B7280", "phase_bg": "#F3F4F6", "title": "中華民國萬歲！", "source": "Basic經典題", "concept": "變數、減法運算、年份換算", "concept_explain": "這題只需要一個減法！\n民國元年 = 西元 1912 年\n民國年 = 西元年 - 1911\n例：2024 - 1911 = 113（民國113年）", "key_points": [["年份換算公式", "民國年 = 西元年 - 1911\n驗算：1912-1911=1（民國元年）"]], "trace_code": "year = 2008\nroc = year - 1911\nprint(f\"西元 {year} 年\")\nprint(f\"計算：{year} - 1911 = {roc}\")\nprint(f\"民國 {roc} 年\")", "skeleton": "year = int(input())\nroc = year ___\nprint(roc)", "skeleton_answers": ["- 1911"], "default_input": "2008", "expected_output": "97", "hint": "民國年 = 西元年 - 1911", "challenge_hint": "測試：2024→113, 1912→1"}, {"id": "05", "phase": "第二階段：條件判斷", "phase_color": "#7C3AED", "phase_bg": "#EDE9FE", "title": "購物折扣應付金額", "source": "Go Class", "concept": "if/elif/else、多門檻判斷、int()去除小數", "concept_explain": "這題學「多層 elif」，就像超市的折扣規則：\n消費越多折扣越多。\n重要：判斷順序要從最高門檻開始！\n如果從最低開始，20000元的人會只打9折，錯了！", "key_points": [["elif 順序很重要", "從大到小判斷：\nif m >= 20000: → 7折\nelif m >= 10000: → 8折\nelif m >= 5000: → 9折"], ["去除小數點", "int(m * 0.9) 把浮點數轉整數"]], "trace_code": "m = 8000\nprint(f\"購物金額：{m} 元\")\nprint(f\"m >= 20000？{m >= 20000} → 不是7折\")\nprint(f\"m >= 10000？{m >= 10000} → 不是8折\")\nprint(f\"m >= 5000？{m >= 5000} → 是！打9折\")\nresult = int(m * 0.9)\nprint(f\"應付：{result}\")", "skeleton": "m = int(input())\n\nif m >= ___:\n    result = int(m * ___)\nelif m >= ___:\n    result = int(m * ___)\nelif m >= ___:\n    result = int(m * ___)\nelse:\n    result = m\n\nprint(result)", "skeleton_answers": ["20000", "0.7", "10000", "0.8", "5000", "0.9"], "default_input": "8000", "expected_output": "7200", "hint": "門檻是 20000、10000、5000，折扣是 0.7、0.8、0.9，從最大開始！", "challenge_hint": "測試：4500→4500, 8000→7200, 15000→12000, 25000→17500"}, {"id": "06", "phase": "第二階段：條件判斷", "phase_color": "#7C3AED", "phase_bg": "#EDE9FE", "title": "操行等級判斷", "source": "Go Class", "concept": "if/elif/else、分數區間判斷", "concept_explain": "這題學 if/elif/else 的多層判斷。\nelif 是「else if」的縮寫，意思是「不然如果...」\n能進到 elif 的，一定已經不滿足前面的條件！\n所以 elif score >= 80，其實代表「80 ≤ score < 90」。", "key_points": [["elif 繼承前面的排除", "if score >= 90 → A\nelif score >= 80 → B（已知<90）\nelif score >= 70 → C（已知<80）"]], "trace_code": "score = 88\nprint(f\"分數：{score}\")\nprint(f\"score >= 90？{score >= 90} → 不是A\")\nprint(f\"score >= 80？{score >= 80} → 是！輸出B\")\n\nif score >= 90:   print(\"A\")\nelif score >= 80: print(\"B\")\nelif score >= 70: print(\"C\")\nelif score >= 60: print(\"D\")\nelse:             print(\"E\")", "skeleton": "score = int(input())\n\nif score >= ___:\n    print(\"A\")\nelif score >= ___:\n    print(\"B\")\nelif score >= ___:\n    print(\"C\")\nelif score >= ___:\n    print(\"D\")\nelse:\n    print(\"E\")", "skeleton_answers": ["90", "80", "70", "60"], "default_input": "88", "expected_output": "B", "hint": "門檻分別是 90、80、70、60，從大到小判斷", "challenge_hint": "測試：100→A, 88→B, 75→C, 65→D, 59→E"}, {"id": "07", "phase": "第二階段：條件判斷", "phase_color": "#7C3AED", "phase_bg": "#EDE9FE", "title": "月份轉季節", "source": "社團練習", "concept": "if/elif/else、in 運算子", "concept_explain": "這題判斷月份對應的季節。\n冬天的月份（12、1、2）不連續，\n沒辦法用範圍判斷，要用 in 來判斷：\nif month in [12, 1, 2]", "key_points": [["in 運算子", "month in [3, 4, 5]\n意思是「month 是不是3、4、5其中一個？」"], ["冬天月份不連續", "冬天是12、1、2月\n不能用 12<=month<=2（永遠不成立！）"]], "trace_code": "for month in [1, 3, 6, 9, 12]:\n    if month in [3, 4, 5]:\n        season = \"spring\"\n    elif month in [6, 7, 8]:\n        season = \"summer\"\n    elif month in [9, 10, 11]:\n        season = \"autumn\"\n    else:\n        season = \"winter\"\n    print(f\"{month}月 → {season}\")", "skeleton": "month = int(input())\n\nif month in [___, ___, ___]:\n    print(\"spring\")\nelif month in [___, ___, ___]:\n    print(\"summer\")\nelif month in [___, ___, ___]:\n    print(\"autumn\")\nelse:\n    print(\"winter\")", "skeleton_answers": ["3", "4", "5", "6", "7", "8", "9", "10", "11"], "default_input": "2", "expected_output": "winter", "hint": "春3-5，夏6-8，秋9-11，冬12/1/2", "challenge_hint": "測試：3→spring, 7→summer, 10→autumn, 12→winter"}, {"id": "08", "phase": "第二階段：條件判斷", "phase_color": "#7C3AED", "phase_bg": "#EDE9FE", "title": "酸鹼值", "source": "社團練習", "concept": "if/elif/else、範圍判斷、or、異常輸入", "concept_explain": "這題多了「輸入值異常」的判斷。\n合理的 pH 值範圍是 -1 到 15。\n一定要「先」判斷是否異常，再判斷酸鹼性，順序不能反！", "key_points": [["先排除異常", "if ph < -1 or ph > 15 → 異常\n再判斷酸/中/鹼"], ["or 的使用", "ph < -1 or ph > 15\n「小於-1」或「大於15」，滿足一個就異常"]], "trace_code": "for ph in [7, 20, 15, -1, 3, 10]:\n    print(f\"pH={ph}：\", end=\"\")\n    if ph < -1 or ph > 15:\n        print(\"Input value is abnormal\")\n    elif ph < 7:\n        print(\"Acidic\")\n    elif ph == 7:\n        print(\"Neutral\")\n    else:\n        print(\"Alkaline\")", "skeleton": "ph = int(input())\n\nif ph ___ -1 or ph ___ 15:\n    print(\"Input value is abnormal\")\nelif ph ___ 7:\n    print(\"Acidic\")\nelif ph ___ 7:\n    print(\"Neutral\")\nelse:\n    print(\"Alkaline\")", "skeleton_answers": ["<", ">", "<", "=="], "default_input": "7", "expected_output": "Neutral", "hint": "先用 or 判斷超出範圍（<-1 或 >15），再判斷酸中鹼", "challenge_hint": "測試：7→Neutral, 20→Input value is abnormal, -1→Acidic"}, {"id": "09", "phase": "第二階段：條件判斷", "phase_color": "#7C3AED", "phase_bg": "#EDE9FE", "title": "該減肥了！", "source": "Basic經典題", "concept": "if/else、單一條件、> 和 >= 的差別", "concept_explain": "這題只有一個條件！\n體重大於 50 公斤（注意：不包含50）就免費送體驗課減1公斤。\n「大於50」是 >，「大於等於50」是 >=，題目說「大於」所以用 >", "key_points": [["> 和 >= 的差別", "weight > 50  → 51以上才成立，50不成立\nweight >= 50 → 50以上都成立"]], "trace_code": "for weight in [60, 50, 51, 30]:\n    print(f\"體重 {weight} 公斤：\", end=\"\")\n    if weight > 50:\n        print(f\"送體驗課！離開時 {weight-1} 公斤\")\n    else:\n        print(f\"不用減，離開時 {weight} 公斤\")", "skeleton": "weight = int(input())\n\nif weight ___ 50:\n    print(weight ___)\nelse:\n    print(___)", "skeleton_answers": ["> ", "- 1", "weight"], "default_input": "60", "expected_output": "59", "hint": "「大於50」用 >，成立時輸出 weight-1，否則輸出 weight", "challenge_hint": "測試：60→59, 50→50, 51→50, 30→30"}, {"id": "10", "phase": "第三階段：for 迴圈", "phase_color": "#059669", "phase_bg": "#D1FAE5", "title": "連續和", "source": "社團練習", "concept": "for 迴圈、range()、累加、格式化輸出", "concept_explain": "這題學 for 迴圈的「累加」！\nfor 迴圈就像點名，從第1個點到第N個，每次做同樣的事。\n累加：total += i（每次把 i 加進 total）\n特殊輸出格式：1 +... + 100 = 5050", "key_points": [["range(1, n+1)", "range(1, 6) → 1,2,3,4,5（不含6！）\nrange(1,n+1) → 1到n（含n）"], ["累加模式", "total = 0  ← 初始值一定是0\nfor i in range(1,n+1):\n    total += i"]], "trace_code": "n = 5\ntotal = 0\nprint(f\"開始：total = {total}\")\nfor i in range(1, n+1):\n    total += i\n    print(f\"  第{i}步：加了{i}，total={total}\")\nprint(f\"結果：1 +... + {n} = {total}\")", "skeleton": "n = int(input())\n\ntotal = ___\nfor i in range(___, ___):\n    total += ___\n\nprint(f\"___ +... + {n} = {total}\")", "skeleton_answers": ["0", "1", "n + 1", "i", "1"], "default_input": "100", "expected_output": "1 +... + 100 = 5050", "hint": "total從0開始，range從1到n+1，輸出格式是「1 +... + n = 總和」", "challenge_hint": "測試：100→「1 +... + 100 = 5050」（注意格式！）"}, {"id": "11", "phase": "第三階段：for 迴圈", "phase_color": "#059669", "phase_bg": "#D1FAE5", "title": "偶數和", "source": "社團練習", "concept": "for 迴圈、if 條件累加、兩數之間的範圍", "concept_explain": "這題是「for + if」的組合！\n在迴圈裡面加條件，只累加符合條件的數字。\n輸入兩個數字 a 和 b，找出 a 到 b 之間的偶數。\n偶數判斷：i % 2 == 0", "key_points": [["for + if 組合", "for i in range(a, b+1):\n    if i % 2 == 0:\n        total += i"], ["一行輸入兩個數", "a, b = map(int, input().split())"]], "trace_code": "a, b = 1, 9\ntotal = 0\nprint(f\"找 {a} 到 {b} 之間的偶數：\")\nfor i in range(a, b+1):\n    if i % 2 == 0:\n        total += i\n        print(f\"  {i} 是偶數，加入！total={total}\")\nprint(f\"偶數和 = {total}\")", "skeleton": "a, b = map(int, input().split())\n\ntotal = 0\nfor i in range(___, ___ + 1):\n    if i % ___ == ___:\n        total += ___\n\nprint(total)", "skeleton_answers": ["a", "b", "2", "0", "i"], "default_input": "1 9", "expected_output": "20", "hint": "偶數條件是 i%2==0，range要包含b（所以是b+1）", "challenge_hint": "測試：1 9→20, 2 10→30"}, {"id": "12", "phase": "第三階段：for 迴圈", "phase_color": "#059669", "phase_bg": "#D1FAE5", "title": "因數質數", "source": "社團練習", "concept": "for 迴圈、因數列舉、質數判斷", "concept_explain": "這題同時做兩件事：列出因數、判斷質數。\n因數：能整除 n 的數（n % i == 0）\n質數：只有 1 和自己兩個因數\n用 list 存所有因數，用 join 組合輸出。", "key_points": [["找因數", "for i in range(1, n+1):\n    if n % i == 0:\n        factors.append(str(i))"], ["判斷質數", "質數只有2個因數（1和自己）\nif len(factors) == 2"], ["join 組合字串", "\" \".join(factors) 用空格把list連起來"]], "trace_code": "n = 12\nfactors = []\nfor i in range(1, n+1):\n    if n % i == 0:\n        factors.append(str(i))\n        print(f\"  {i} 是 {n} 的因數\")\nprint(f\"The factors of {n} have {' '.join(factors)}\")\nif len(factors) == 2:\n    print(f\"{n} is a prime number\")\nelse:\n    print(f\"{n} is not a prime number\")", "skeleton": "n = int(input())\n\nfactors = []\nfor i in range(___, ___ + 1):\n    if n % i == ___:\n        factors.append(str(___))\n\nprint(f\"The factors of {n} have {' '.join(factors)}\")\nif len(factors) == ___:\n    print(f\"{n} is a prime number\")\nelse:\n    print(f\"{n} is not a prime number\")", "skeleton_answers": ["1", "n", "0", "i", "2"], "default_input": "17", "expected_output": "The factors of 17 have 1 17\n17 is a prime number", "hint": "質數只有2個因數，append要存str格式，join用空格連接", "challenge_hint": "測試：17→質數, 12→非質數（1 2 3 4 6 12）"}, {"id": "13", "phase": "第三階段：for 迴圈", "phase_color": "#059669", "phase_bg": "#D1FAE5", "title": "銀行利息", "source": "PTQS高中計畫", "concept": "for 迴圈、複利計算", "concept_explain": "這題學複利的計算方式。\n年利率10%，一年付一次 → 簡單利息 1000元\n年利率10%，一年付兩次（每次5%）→ 複利，錢更多！\n差距 = 複利總利息 - 簡單利息", "key_points": [["每次利率", "each_rate = rate / 100 / n\n年利率10%分2次 → 每次5%"], ["複利計算", "compound *= (1 + each_rate)\n每次加利率後更新本金"]], "trace_code": "principal, rate, n = 10000, 10, 2\nsimple = principal * rate / 100\nprint(f\"簡單利息：{simple} 元\")\ncompound = principal\neach_rate = rate / 100 / n\nfor i in range(n):\n    compound *= (1 + each_rate)\n    print(f\"第{i+1}次付息後：{compound:.4f} 元\")\ncompound_interest = compound - principal\ndiff = round(compound_interest - simple)\nprint(f\"差額：{diff} 元\")", "skeleton": "principal = int(input())\nrate      = int(input())\nn         = int(input())\n\nsimple = principal * ___ / 100\n\ncompound = principal\neach_rate = rate / 100 / ___\nfor _ in range(___):\n    compound *= (1 + ___)\n\ncompound_interest = compound - principal\ndiff = round(compound_interest - ___)\nprint(diff)", "skeleton_answers": ["rate", "n", "n", "each_rate", "simple"], "default_input": "10000\n10\n2", "expected_output": "25", "hint": "each_rate=rate/100/n，複利用*=(1+each_rate)，最後round()四捨五入", "challenge_hint": "測試：10000 10 2→25, 10000 10 4→37"}, {"id": "14", "phase": "第三階段：for 迴圈", "phase_color": "#059669", "phase_bg": "#D1FAE5", "title": "盜墓筆記", "source": "臺南一中", "concept": "for 迴圈、座標追蹤、方向移動", "concept_explain": "這題用程式模擬方向移動。\n1=北（y增加）、2=南（y減少）\n3=東（x增加）、4=西（x減少）\n每次輸入方向和步數，更新座標，最後輸出位置。", "key_points": [["方向對應", "1（北）→ y+=step\n2（南）→ y-=step\n3（東）→ x+=step\n4（西）→ x-=step"], ["輸出格式", "print(f\"({x},{y})\")\n括號和逗號中間沒有空格"]], "trace_code": "moves = [(1,5),(4,5),(2,3),(4,8),(1,10),(3,13)]\nx, y = 0, 0\ndn = {1:\"北\",2:\"南\",3:\"東\",4:\"西\"}\nprint(f\"起點：({x},{y})\")\nfor d, step in moves:\n    if d == 1:   y += step\n    elif d == 2: y -= step\n    elif d == 3: x += step\n    else:        x -= step\n    print(f\"  往{dn[d]}{step}步 → ({x},{y})\")", "skeleton": "x, y = map(int, input().split())\nn = int(input())\n\nfor _ in range(n):\n    d, step = map(int, input().split())\n    if d == 1:\n        y ___ step\n    elif d == 2:\n        y ___ step\n    elif d == 3:\n        x ___ step\n    else:\n        x ___ step\n\nprint(f\"({x},{y})\")", "skeleton_answers": ["+=", "-=", "+=", "-="], "default_input": "0 0\n6\n1 5\n4 5\n2 3\n4 8\n1 10\n3 13", "expected_output": "(0,12)", "hint": "北y+，南y-，東x+，西x-，輸出(x,y)中間沒空格", "challenge_hint": "從起點出發，依方向移動後輸出最終座標"}, {"id": "15", "phase": "第四階段：while 迴圈", "phase_color": "#D97706", "phase_bg": "#FEF3C7", "title": "Collatz conjecture", "source": "臺南一中", "concept": "while 迴圈、奇偶判斷、數列計數", "concept_explain": "神奇的數學猜想！\n不管輸入什麼正整數，按規則最終都會變成 1：\n奇數 → 乘以3再加1\n偶數 → 除以2\n計算數列長度（包含起始數和1）。", "key_points": [["while 停止條件", "while n != 1: ← 還沒到1就繼續"], ["除以2用 //", "n = n // 2\n不能用 n/2，浮點數會無窮迴圈！"], ["count 從 1 開始", "起始數也算在數列裡"]], "trace_code": "n = 13\ncount = 1\nprint(f\"數列：{n}\", end=\"\")\nwhile n != 1:\n    if n % 2 == 1:\n        n = n * 3 + 1\n    else:\n        n = n // 2\n    count += 1\n    print(f\" → {n}\", end=\"\")\nprint(f\"\n數列長度：{count}\")", "skeleton": "n = int(input())\ncount = ___\n\nwhile n ___ 1:\n    if n % 2 == ___:\n        n = n * ___ + ___\n    else:\n        n = n ___ 2\n    count += ___\n\nprint(count)", "skeleton_answers": ["1", "!= ", "1", "3", "1", "// ", "1"], "default_input": "13", "expected_output": "10", "hint": "count從1開始，奇數×3+1，偶數//2，停止條件是 n != 1", "challenge_hint": "測試：13→10（數列共10個數）"}, {"id": "16", "phase": "第四階段：while 迴圈", "phase_color": "#D97706", "phase_bg": "#FEF3C7", "title": "最大公因數(GCD)", "source": "社團練習", "concept": "while 迴圈、輾轉相除法、多重賦值", "concept_explain": "輾轉相除法是求最大公因數的經典方法！\n原理：GCD(a,b) = GCD(b, a%b)\n一直除到餘數為0，另一個數就是答案。\nPython 優雅寫法：a, b = b, a%b（同時更新）", "key_points": [["輾轉相除法", "GCD(12,8)=GCD(8,4)=GCD(4,0)→答案4"], ["多重賦值", "a, b = b, a % b\n右邊先算完，再同時賦值"]], "trace_code": "a, b = 48, 18\nprint(f\"求 GCD({a}, {b})\")\nwhile b != 0:\n    print(f\"  GCD({a},{b}) → a,b = {b},{a%b}\")\n    a, b = b, a % b\nprint(f\"答案：{a}\")", "skeleton": "a, b = map(int, input().split())\n\nwhile b ___ 0:\n    a, b = b, ___\n\nprint(a)", "skeleton_answers": ["!= ", "a % b"], "default_input": "12 15", "expected_output": "3", "hint": "while b != 0，每次 a, b = b, a%b，結束時 a 就是答案", "challenge_hint": "測試：12 15→3, 48 18→6"}, {"id": "17", "phase": "第四階段：while 迴圈", "phase_color": "#D97706", "phase_bg": "#FEF3C7", "title": "周年慶購物活動", "source": "PTQS高中計畫", "concept": "while 迴圈、累積計算、整除取餘", "concept_explain": "這題模擬「買口罩送點數、點數換口罩」的活動。\n關鍵：換來的口罩也能得點數！\n所以要一直換到點數不夠為止。\n這就是 while 的用途：不知道要換幾次，直到不滿足才停。", "key_points": [["初始狀態", "boxes = z // x（花錢買幾盒）\npoints = boxes（買幾盒得幾點）"], ["while 迴圈", "while points >= y:\n    new = points // y\n    boxes += new\n    points = points%y + new"]], "trace_code": "x, y, z = 100, 10, 1000\nboxes = z // x\npoints = boxes\nprint(f\"花{z}元買{boxes}盒，得{points}點\")\nwhile points >= y:\n    new = points // y\n    boxes += new\n    points = points % y + new\n    print(f\"  換{new}盒，共{boxes}盒，剩{points}點\")\nprint(f\"最終：{boxes}盒\")", "skeleton": "x, y, z = map(int, input().split())\n\nboxes  = z ___ x\npoints = ___\n\nwhile points ___ y:\n    new_boxes = points ___ y\n    boxes  += ___\n    points = points ___ y + ___\n\nprint(boxes)", "skeleton_answers": ["// ", "boxes", ">= ", "// ", "new_boxes", "% ", "new_boxes"], "default_input": "100 10 5000", "expected_output": "55", "hint": "初始盒數=z//x，初始點數=盒數，每次換完更新盒數和剩餘點數", "challenge_hint": "測試：100 10 5000→55"}, {"id": "18", "phase": "第五階段：陣列", "phase_color": "#2563EB", "phase_bg": "#DBEAFE", "title": "找出最小值", "source": "飆程式網", "concept": "一維陣列（list）、線性掃描", "concept_explain": "陣列（Python 叫 list）可以存放很多數字。\n找最小值：「線性掃描」\n先假設第一個是最小，一個一個比，遇到更小的就更新。\n就像找班上最矮的學生，從頭走到尾比過去。", "key_points": [["讀入一整排數字", "nums = list(map(int, input().split()))"], ["線性掃描", "min_val = nums[0]  ← 先假設第一個最小\nfor i in range(1,n):\n    if nums[i] < min_val:\n        min_val = nums[i]"]], "trace_code": "nums = [6, 3, 4, 17, 9]\nn = len(nums)\nmin_val = nums[0]\nprint(f\"初始最小值：{min_val}\")\nfor i in range(1, n):\n    print(f\"  比較{nums[i]}和{min_val}\", end=\"\")\n    if nums[i] < min_val:\n        min_val = nums[i]\n        print(f\" → 更新！min={min_val}\")\n    else:\n        print(\" → 不更新\")\nprint(f\"最小值：{min_val}\")", "skeleton": "n = int(input())\nnums = list(map(int, input().split()))\n\nmin_val = nums[___]\nfor i in range(___, n):\n    if nums[i] ___ min_val:\n        min_val = ___\n\nprint(min_val)", "skeleton_answers": ["0", "1", "< ", "nums[i]"], "default_input": "5\n6 3 4 17 9", "expected_output": "3", "hint": "min_val先設成nums[0]，從索引1開始比，遇到更小的就更新", "challenge_hint": "測試：5個數 6 3 4 17 9→3"}, {"id": "19", "phase": "第五階段：陣列", "phase_color": "#2563EB", "phase_bg": "#DBEAFE", "title": "數值反序輸出", "source": "飆程式網", "concept": "一維陣列、反向索引、print(*list)", "concept_explain": "這題把陣列反過來輸出！\n方法：用迴圈從後往前（range 步長設為 -1）\n最後用 print(*result)，* 號把 list 展開，用空格分隔。", "key_points": [["反向 range", "range(n-1, -1, -1)\n從n-1開始，步長-1，到-1結束（不含）"], ["print(*list) 展開", "print(*[5,4,3]) → 5 4 3"]], "trace_code": "nums = [2, 3, 12, 4, 5]\nn = len(nums)\nprint(f\"原始：{nums}\")\nresult = []\nfor i in range(n-1, -1, -1):\n    print(f\"  nums[{i}]={nums[i]}\", end=\" \")\n    result.append(nums[i])\nprint(f\"\n輸出：\", end=\"\")\nprint(*result)", "skeleton": "n = int(input())\nnums = list(map(int, input().split()))\n\nresult = []\nfor i in range(___, -1, ___):\n    result.append(nums[___])\n\nprint(*result)", "skeleton_answers": ["n - 1", "-1", "i"], "default_input": "5\n2 3 12 4 5", "expected_output": "5 4 12 3 2", "hint": "range從n-1開始，步長-1，終點-1（才包含索引0）", "challenge_hint": "測試：5個數 2 3 12 4 5→5 4 12 3 2"}, {"id": "20", "phase": "第五階段：陣列", "phase_color": "#2563EB", "phase_bg": "#DBEAFE", "title": "成績加總", "source": "社團練習", "concept": "一維陣列、固定6筆輸入、sum()、平均", "concept_explain": "這題輸入6個成績，計算總分和平均。\n用 list 存6個成績，用 sum() 計算總和。\n平均保留2位小數，用 :.2f 格式。", "key_points": [["固定次數輸入", "for i in range(6):\n    scores.append(int(input()))"], ["sum() 計算總和", "total = sum(scores)"], ["平均保留2位小數", "avg = total / 6\nprint(f\"{avg:.2f}\")"]], "trace_code": "scores = [89, 90, 89, 78, 70, 20]\nprint(f\"成績：{scores}\")\ntotal = sum(scores)\nprint(f\"總分：{total}\")\navg = total / 6\nprint(f\"平均：{avg:.2f}\")", "skeleton": "scores = []\nfor i in range(___):\n    scores.append(int(input()))\n\ntotal = ___\navg   = total / ___\n\nprint(total)\nprint(f\"{avg:___}\")", "skeleton_answers": ["6", "sum(scores)", "6", ".2f"], "default_input": "89\n90\n89\n78\n70\n20", "expected_output": "436\n72.67", "hint": "range(6)，total用sum()，avg=total/6，格式:.2f", "challenge_hint": "測試：89 90 89 78 70 20→436 和 72.67"}, {"id": "21", "phase": "第五階段：陣列", "phase_color": "#2563EB", "phase_bg": "#DBEAFE", "title": "找尋出現最多次的數值", "source": "飆程式網", "concept": "一維陣列、字典計數、並列最大值", "concept_explain": "這題找「出現最多次」的數字，可能有多個並列！\n用「字典（dict）」來計數：每個數字出現幾次記幾次。\n最後找出最大次數，找出所有達到最大次數的數字。", "key_points": [["字典計數", "count = {}\nfor x in nums:\n    count[x] = count.get(x,0) + 1"], ["找並列最大", "max_count = max(count.values())\n找出所有 count[x]==max_count 的 x"]], "trace_code": "nums = [1, 9, 3, 5, 1, 4, 0, 9, 8, 1, 4, 2, 4]\ncount = {}\nfor x in nums:\n    count[x] = count.get(x, 0) + 1\nprint(f\"計數：{count}\")\nmax_count = max(count.values())\nprint(f\"最大次數：{max_count}\")\nresult = [x for x in sorted(count) if count[x] == max_count]\nprint(f\"答案：{' '.join(map(str,result))}\")", "skeleton": "n = int(input())\nnums = list(map(int, input().split()))\n\ncount = {}\nfor x in nums:\n    count[x] = count.get(x, 0) + ___\n\nmax_count = max(count.___)\nresult = [x for x in sorted(count) if count[x] == ___]\nprint(\" \".join(map(str, result)))", "skeleton_answers": ["1", "values()", "max_count"], "default_input": "13\n1 9 3 5 1 4 0 9 8 1 4 2 4", "expected_output": "1 4", "hint": "count.get(x,0)+1計數，max(count.values())找最大，sorted()由小到大", "challenge_hint": "測試：輸入→1 4（各出現3次）"}, {"id": "22", "phase": "第五階段：陣列", "phase_color": "#2563EB", "phase_bg": "#DBEAFE", "title": "七星彩", "source": "臺南一中", "concept": "一維陣列、in 比對、字串重複", "concept_explain": "這題用陣列做對獎！\n把7個獎號存在 list，再把自己的號碼一個一個比對。\n對中幾個就輸出幾個「7」，0個就輸出「Dog food」。\nPython 字串乘法：\"7\" * 3 = \"777\"", "key_points": [["in 比對", "if num in lucky: ← 判斷 num 是否在 lucky 裡"], ["字串重複", "\"7\" * match ← 重複match次\n\"7\" * 3 = \"777\""]], "trace_code": "lucky = [17, 27, 37, 47, 57, 67, 77]\nmine  = [17, 27, 38, 48, 57, 67, 77]\nmatch = 0\nfor num in mine:\n    if num in lucky:\n        match += 1\n        print(f\"  {num} 對中！\")\n    else:\n        print(f\"  {num} 未中\")\nprint(\"Dog food\" if match == 0 else \"7\" * match)", "skeleton": "lucky = list(map(int, input().split()))\nmine  = list(map(int, input().split()))\n\nmatch = 0\nfor num in ___:\n    if num ___ lucky:\n        match += ___\n\nif match == ___:\n    print(\"Dog food\")\nelse:\n    print(\"7\" ___ match)", "skeleton_answers": ["mine", "in ", "1", "0", "* "], "default_input": "17 27 37 47 57 67 77\n17 27 38 48 57 67 77", "expected_output": "77777", "hint": "走訪mine，用in比對lucky，\"7\"*match重複字串", "challenge_hint": "對中5個→77777, 對中0個→Dog food"}, {"id": "23", "phase": "第六階段：進階整合", "phase_color": "#DC2626", "phase_bg": "#FEE2E2", "title": "Bubble-sort", "source": "吳邦一教授", "concept": "巢狀迴圈、泡沫排序、交換計數", "concept_explain": "泡沫排序：相鄰兩個比較，大的往後移。\n每輪結束，最大的數就「浮」到最後面。\n這題計算「交換幾次」，每次交換就 +1。\n輸入多組，0 代表結束。", "key_points": [["雙層迴圈", "外層 i：共跑 n-1 輪\n內層 j：每輪跑 n-1-i 次"], ["計算交換次數", "if nums[j] > nums[j+1]:\n    swap\n    swaps += 1"]], "trace_code": "nums = [3, 10, 5, 17]\nswaps = 0\nn = len(nums)\nprint(f\"初始：{nums}\")\nfor i in range(n-1):\n    for j in range(n-1-i):\n        if nums[j] > nums[j+1]:\n            print(f\"  交換{nums[j]}和{nums[j+1]}\")\n            nums[j], nums[j+1] = nums[j+1], nums[j]\n            swaps += 1\n    print(f\"  第{i+1}輪後：{nums}\")\nprint(f\"交換次數：{swaps}\")", "skeleton": "import sys\nfor line in sys.stdin:\n    nums = list(map(int, line.split()))\n    if nums[0] == ___:\n        break\n    swaps = 0\n    n = len(nums)\n    for i in range(n - ___):\n        for j in range(n - 1 - ___):\n            if nums[j] ___ nums[j+1]:\n                nums[j], nums[j+1] = nums[j+1], nums[j]\n                swaps += ___\n    print(swaps)", "skeleton_answers": ["0", "1", "i", "> ", "1"], "default_input": "3 10 5 17\n5 6 66 73 49 39\n0", "expected_output": "1\n5", "hint": "外層跑n-1輪，內層跑n-1-i次，交換時swaps+1，0結束", "challenge_hint": "測試：3 10 5 17→1次交換"}, {"id": "24", "phase": "第六階段：進階整合", "phase_color": "#DC2626", "phase_bg": "#FEE2E2", "title": "Select-sort", "source": "吳邦一教授", "concept": "巢狀迴圈、選擇排序、記錄最小索引", "concept_explain": "選擇排序：每輪從未排序的部分「選出最小值」，放到最前面。\n和泡沫排序比較：\n泡沫：相鄰兩兩比較\n選擇：每輪找最小值的位置，一次交換到定位\n這題輸出：排序結果 + 交換次數。", "key_points": [["記錄最小索引", "min_idx = i\nfor j in range(i+1,n):\n    if nums[j]<nums[min_idx]:\n        min_idx=j"], ["只有需要才交換", "if min_idx != i:\n    swap\n    swaps += 1"]], "trace_code": "nums = [3, 10, 5, 17]\nswaps = 0\nn = len(nums)\nfor i in range(n-1):\n    min_idx = i\n    for j in range(i+1, n):\n        if nums[j] < nums[min_idx]:\n            min_idx = j\n    if min_idx != i:\n        print(f\"  交換{nums[i]}和{nums[min_idx]}\")\n        nums[i], nums[min_idx] = nums[min_idx], nums[i]\n        swaps += 1\n    print(f\"  {nums}\")\nprint(f\"結果：{' '.join(map(str,nums))} {swaps}\")", "skeleton": "import sys\nfor line in sys.stdin:\n    nums = list(map(int, line.split()))\n    if nums[0] == ___:\n        break\n    swaps = 0\n    n = len(nums)\n    for i in range(n - ___):\n        min_idx = ___\n        for j in range(___, n):\n            if nums[j] ___ nums[min_idx]:\n                min_idx = ___\n        if min_idx != i:\n            nums[i], nums[min_idx] = ___, ___\n            swaps += ___\n    print(\" \".join(map(str, nums)), swaps)", "skeleton_answers": ["0", "1", "i", "i + 1", "< ", "j", "nums[min_idx]", "nums[i]", "1"], "default_input": "3 10 5 17\n5 6 66 73 49 39\n2 5 7\n0", "expected_output": "5 10 17 1\n6 39 49 66 73 3\n5 7 0", "hint": "min_idx記最小值位置，只有min_idx!=i才交換，輸出排序結果和交換次數", "challenge_hint": "測試：3 10 5 17→5 10 17 1"}, {"id": "25", "phase": "第六階段：進階整合", "phase_color": "#DC2626", "phase_bg": "#FEE2E2", "title": "Run-length encoding", "source": "吳邦一教授", "concept": "字串掃描、相鄰比較、RLE壓縮", "concept_explain": "RLE 是一種壓縮方法：\n把連續重複的字元用「次數+字元」表示。\n例如：aaabb → 3a2b\n掃描字串，遇到和前一個相同就計數+1，不同就輸出並重置。\n注意：大小寫是不同字元！", "key_points": [["相鄰比較", "for i in range(1, len(s)):\n    if s[i] == s[i-1]:\n        count += 1\n    else:\n        輸出並重置"], ["處理最後一段", "result += str(count) + s[-1]\n迴圈結束後補上最後一段！"]], "trace_code": "s = \"aaabb\"\nresult = \"\"\ncount = 1\nfor i in range(1, len(s)):\n    print(f\"  比較'{s[i]}'和'{s[i-1]}'：\", end=\"\")\n    if s[i] == s[i-1]:\n        count += 1\n        print(f\"相同，count={count}\")\n    else:\n        result += str(count) + s[i-1]\n        print(f\"不同，輸出{count}{s[i-1]}，重置count=1\")\n        count = 1\nresult += str(count) + s[-1]\nprint(f\"最後補上：{count}{s[-1]}\")\nprint(f\"結果：{result}\")", "skeleton": "import sys\nfor line in sys.stdin:\n    s = line.strip()\n    if not s: continue\n    result = \"\"\n    count = ___\n    for i in range(___, len(s)):\n        if s[i] == s[___]:\n            count += ___\n        else:\n            result += str(___) + s[___]\n            count = ___\n    result += str(___) + s[___]\n    print(result)", "skeleton_answers": ["1", "1", "i - 1", "1", "count", "i - 1", "1", "count", "-1"], "default_input": "aaabb\nccccCCcc", "expected_output": "3a2b\n4c2C2c", "hint": "count從1開始，比較s[i]和s[i-1]，不同時輸出並重置，最後補最後一段", "challenge_hint": "測試：aaabb→3a2b, ccccCCcc→4c2C2c（大小寫不同！）"}, {"id": "26", "phase": "第六階段：進階整合", "phase_color": "#DC2626", "phase_bg": "#FEE2E2", "title": "籃球比賽", "source": "APCS實作", "concept": "條件判斷、多行輸入、sum()、勝負判斷", "concept_explain": "這題模擬籃球比賽計分。\n每場比賽：主隊4節得分 + 客隊4節得分\n輸出每場比分，最後輸出總勝負。", "key_points": [["讀取多行", "import sys\nlines = [l.strip() for l in sys.stdin if l.strip()]"], ["每兩行一場", "主隊=lines[i]，客隊=lines[i+1]\n每次 i += 2"]], "trace_code": "data = [[87,87,87,87],[78,78,78,78],[87,87,87,87],[78,78,78,78]]\nhome_total = away_total = 0\ni = 0\nwhile i < len(data)-1:\n    home = sum(data[i])\n    away = sum(data[i+1])\n    home_total += home\n    away_total += away\n    print(f\"{home}:{away}\")\n    i += 2\nif home_total > away_total: print(\"Win\")\nelif home_total < away_total: print(\"Lose\")\nelse: print(\"Tie\")", "skeleton": "import sys\nlines = [line.strip() for line in sys.stdin if line.strip()]\nhome_total = away_total = 0\ni = 0\nwhile i < len(lines) - ___:\n    home = sum(map(int, lines[i].split()))\n    away = sum(map(int, lines[___ + 1].split()))\n    home_total += ___\n    away_total += ___\n    print(f\"{home}:{away}\")\n    i += ___\nif home_total ___ away_total: print(\"Win\")\nelif home_total ___ away_total: print(\"Lose\")\nelse: print(\"Tie\")", "skeleton_answers": ["1", "i", "home", "away", "2", "> ", "< "], "default_input": "87 87 87 87\n78 78 78 78\n87 87 87 87\n78 78 78 78", "expected_output": "348:312\n348:312\nWin", "hint": "每兩行一場（i+=2），sum計算4節總分，最後比較總分判斷勝負", "challenge_hint": "輸入多場比賽得分，輸出每場比分和總勝負"}, {"id": "27", "phase": "第六階段：進階整合", "phase_color": "#DC2626", "phase_bg": "#FEE2E2", "title": "資料壓縮", "source": "PTQS高中計畫", "concept": "字串掃描、動態長度編碼", "concept_explain": "和 RLE 概念完全一樣！\n差別：每個字元都要輸出數量（包含只出現1次的）\n例：abc → 1a1b1c（每個字母前面都有數字，即使只出現1次）", "key_points": [["和 RLE 相同", "每個字元都有數量\n\"abc\" → \"1a1b1c\""], ["最後一段很重要", "result += str(count) + s[-1]\n這行不能漏！"]], "trace_code": "s = \"aaabbaccca\"\nresult = \"\"\ncount = 1\nfor i in range(1, len(s)):\n    if s[i] == s[i-1]:\n        count += 1\n    else:\n        result += str(count) + s[i-1]\n        count = 1\nresult += str(count) + s[-1]\nprint(f\"輸入：{s}\")\nprint(f\"輸出：{result}\")", "skeleton": "import sys\nfor line in sys.stdin:\n    s = line.strip()\n    if not s: continue\n    result = \"\"\n    count = ___\n    for i in range(___, len(s)):\n        if s[i] == s[___]:\n            count += ___\n        else:\n            result += str(___) + s[___]\n            count = ___\n    result += str(___) + s[___]\n    print(result)", "skeleton_answers": ["1", "1", "i - 1", "1", "count", "i - 1", "1", "count", "-1"], "default_input": "aaabbaccca\nabcabcabcabcbac", "expected_output": "3a2b1a3c1a\n1a1b1c1a1b1c1a1b1c1a1b1c1b1a1c", "hint": "和RLE相同，每個字元都要輸出數量，最後補最後一段", "challenge_hint": "測試：aaabbaccca→3a2b1a3c1a"}];
+
+// ── 進度管理 ──────────────────────────────────────
+const STORAGE_KEY = 'py_learn_progress';
+function getProgress(){
+  try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}'); }
+  catch{ return {}; }
+}
+function setDone(id){
+  const p = getProgress();
+  p[id] = true;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
+  updateProgressUI();
+}
+function isDone(id){ return !!getProgress()[id]; }
+function updateProgressUI(){
+  const p = getProgress();
+  const done = Object.keys(p).filter(k=>p[k]).length;
+  const total = LESSONS.length;
+  document.getElementById('progress-stats').textContent = `${done} / ${total} 完成`;
+  document.getElementById('progress-bar').style.width = `${(done/total)*100}%`;
+  LESSONS.forEach(L=>{
+    const card = document.getElementById('card-'+L.id);
+    const si   = document.getElementById('si-'+L.id);
+    if(isDone(L.id)){
+      card && card.classList.add('completed');
+      si   && si.classList.add('completed');
+    }
+  });
+}
+
+// ── Pyodide ───────────────────────────────────────
+let pyodide = null;
+let pyodideReady = false;
+
+async function initPyodide(){
+  const statusEl = document.getElementById('pyodide-status');
+  const msgEl    = document.getElementById('loading-msg');
+  try{
+    msgEl.textContent = '正在載入 Python 環境...（第一次約需 10-20 秒）';
+    pyodide = await loadPyodide();
+    pyodideReady = true;
+    statusEl.textContent = '✓ Python 就緒';
+    statusEl.className = 'ready';
+    document.getElementById('loading-screen').classList.add('hidden');
+    document.querySelectorAll('.btn-run').forEach(b=>b.disabled=false);
+  } catch(e){
+    statusEl.textContent = '✗ 載入失敗';
+    statusEl.className = 'error';
+    msgEl.textContent = '載入失敗，請重新整理頁面或確認網路連線';
+  }
+}
+
+async function runPython(code, inputStr, outputBodyId){
+  if(!pyodideReady){
+    document.getElementById(outputBodyId).textContent = '⏳ Python 還在載入，請稍候...';
+    return null;
+  }
+  const outEl = document.getElementById(outputBodyId);
+  outEl.textContent = '執行中...';
+  outEl.className = 'output-body';
+  try{
+    const inputLines = (inputStr||'').split('\n');
+    pyodide.globals.set('_input_lines', inputLines);
+    await pyodide.runPythonAsync(`
+import sys, io, builtins
+_buf = io.StringIO()
+_lines = list(_input_lines)
+_idx = [0]
+def _inp(prompt=''):
+    if _idx[0] < len(_lines):
+        v = _lines[_idx[0]]; _idx[0]+=1
+        _buf.write(str(prompt)+str(v)+'\\n')
+        return v
+    return ''
+builtins.input = _inp
+sys.stdout = _buf
+sys.stderr = _buf
+`);
+    await pyodide.runPythonAsync(code);
+    const out = await pyodide.runPythonAsync('_buf.getvalue()');
+    await pyodide.runPythonAsync('sys.stdout=sys.__stdout__;sys.stderr=sys.__stderr__');
+    const trimmed = out.trimEnd() || '（無輸出）';
+    outEl.textContent = trimmed;
+    outEl.className = 'output-body';
+    return trimmed;
+  } catch(e){
+    try{ await pyodide.runPythonAsync('sys.stdout=sys.__stdout__;sys.stderr=sys.__stderr__'); }catch(_){}
+    outEl.textContent = e.message.split('\n').slice(-4).join('\n');
+    outEl.className = 'output-body err';
+    return null;
+  }
+}
+
+// ── 工具函式 ──────────────────────────────────────
+function escHtml(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+const RUN_ICON = `<svg viewBox="0 0 12 12"><path d="M2 1l9 5-9 5V1z"/></svg>`;
+
+function buildPhaseColor(phase){
+  const map = {
+    '第一階段：基本運算':'#9198a1',
+    '第二階段：條件判斷':'#a371f7',
+    '第三階段：for 迴圈':'#3fb950',
+    '第四階段：while 迴圈':'#d29922',
+    '第五階段：陣列':'#58a6ff',
+    '第六階段：進階整合':'#f85149',
+  };
+  return map[phase]||'#9198a1';
+}
+
+// ── 填空 skeleton（with hint tooltips, from index1） ──
+function buildSkeleton(skeletonCode, answers){
+  const parts = skeletonCode.split('___');
+  let html = '';
+  parts.forEach((p, i)=>{
+    html += escHtml(p);
+    if(i < parts.length - 1){
+      const hint = (answers && answers[i]) ? answers[i] : null;
+      if(hint){
+        html += `<span class="blank-wrap">`;
+        html += `<span class="blank" contenteditable="true" spellcheck="false" data-idx="${i}"></span>`;
+        html += `<span class="hint-btn" onclick="toggleHint(this,'${escHtml(hint)}')">?</span>`;
+        html += `<span class="hint-popup"></span>`;
+        html += `</span>`;
+      } else {
+        html += `<span class="blank" contenteditable="true" spellcheck="false" data-idx="${i}"></span>`;
+      }
+    }
+  });
+  return html;
+}
+
+function toggleHint(btn, hintText){
+  const popup = btn.nextElementSibling;
+  const shown = popup.classList.contains('show');
+  document.querySelectorAll('.hint-popup.show').forEach(p=>{
+    p.classList.remove('show');
+    p.previousElementSibling && p.previousElementSibling.classList.remove('shown');
+  });
+  if(!shown){
+    popup.textContent = '💡 ' + hintText;
+    popup.classList.add('show');
+    btn.classList.add('shown');
+  }
+}
+
+// ── 建立題目 HTML（with tabs + mac code card） ──────
+function buildCard(L){
+  const color = buildPhaseColor(L.phase);
+  const keyPointsHtml = L.key_points.map(([title,body])=>`
+    <div class="key-point" style="border-left-color:${color};">
+      <div class="key-point-title">${escHtml(title)}</div>
+      <div class="key-point-body">${escHtml(body)}</div>
+    </div>`).join('');
+
+  return `
+<div class="lesson-card" id="card-${L.id}" data-phase="${escHtml(L.phase)}">
+  <div class="lesson-header" id="hdr-${L.id}" onclick="toggleCard('${L.id}')">
+    <div class="lesson-num" style="color:${color};">${L.id}</div>
+    <div class="lesson-info">
+      <div class="lesson-title">${escHtml(L.title)}</div>
+      <div class="lesson-meta">${escHtml(L.phase)} ｜ ${escHtml(L.source)} ｜ <span style="font-family:'JetBrains Mono',monospace;font-size:11px;">${escHtml(L.concept)}</span></div>
+    </div>
+    <span class="completed-badge">✓ 完成</span>
+    <button class="expand-btn">展開 ▼</button>
+  </div>
+  <div class="lesson-body" id="body-${L.id}">
+
+    <!-- Tab Bar -->
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('${L.id}','concept')">📖 概念</button>
+      <button class="tab-btn" onclick="switchTab('${L.id}','trace')">🔍 追蹤</button>
+      <button class="tab-btn" onclick="switchTab('${L.id}','fill')">✏️ 填空</button>
+      <button class="tab-btn" onclick="switchTab('${L.id}','challenge')">💡 挑戰</button>
+    </div>
+
+    <!-- ① 概念說明 -->
+    <div class="tab-content active" id="tab-concept-${L.id}">
+      <div class="section-label"><span class="step-badge">①</span> 概念說明（先讀這裡）</div>
+      <div class="concept-text">${escHtml(L.concept_explain)}</div>
+      <div class="key-point-list">${keyPointsHtml}</div>
+    </div>
+
+    <!-- ② 追蹤版 -->
+    <div class="tab-content" id="tab-trace-${L.id}">
+      <div class="section-label"><span class="step-badge">②</span> 追蹤版（直接執行，看程式怎麼跑）</div>
+      <div class="code-card">
+        <div class="code-topbar">
+          <div class="mac-dots">
+            <div class="mac-dot mac-dot-r"></div>
+            <div class="mac-dot mac-dot-y"></div>
+            <div class="mac-dot mac-dot-g"></div>
+          </div>
+          <span class="code-fname">trace_${L.id}.py</span>
+          <div class="code-actions">
+            <button class="btn btn-run" id="btn-trace-${L.id}" onclick="runTrace('${L.id}')">${RUN_ICON} 執行追蹤版</button>
+          </div>
+        </div>
+        <pre class="code-display">${escHtml(L.trace_code)}</pre>
+        <div class="output-wrap" id="out-wrap-trace-${L.id}" style="display:none;">
+          <div class="output-header">▶ 輸出結果</div>
+          <div class="output-body empty" id="out-trace-${L.id}">（點「執行」看結果）</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ③ 填空版 -->
+    <div class="tab-content" id="tab-fill-${L.id}">
+      <div class="section-label"><span class="step-badge">③</span> 填空版（點空格輸入答案，? 可看提示）</div>
+      <div class="hint-box">💬 整體提示：${escHtml(L.hint)}</div>
+      <div class="input-section">
+        <div class="input-label">📥 測試輸入</div>
+        <textarea class="code-input" id="stdin-fill-${L.id}" rows="3">${escHtml(L.default_input)}</textarea>
+      </div>
+      <div class="code-card">
+        <div class="code-topbar">
+          <div class="mac-dots">
+            <div class="mac-dot mac-dot-r"></div>
+            <div class="mac-dot mac-dot-y"></div>
+            <div class="mac-dot mac-dot-g"></div>
+          </div>
+          <span class="code-fname">fill_in_${L.id}.py</span>
+          <div class="code-actions">
+            <button class="btn btn-ghost" onclick="resetBlanks('${L.id}')">重置</button>
+            <button class="btn btn-check" onclick="checkBlanks('${L.id}')">✓ 檢查</button>
+            <button class="btn btn-run" id="btn-fill-${L.id}" onclick="runFill('${L.id}')">${RUN_ICON} 執行</button>
+          </div>
+        </div>
+        <div class="skeleton-code" id="sk-${L.id}">${buildSkeleton(L.skeleton, L.skeleton_answers)}</div>
+        <div class="output-wrap" id="out-wrap-fill-${L.id}" style="display:none;">
+          <div class="output-header">▶ 輸出結果</div>
+          <div class="output-body empty" id="out-fill-${L.id}">（點「執行」看結果）</div>
+        </div>
+      </div>
+      <div class="check-result" id="check-result-${L.id}"></div>
+    </div>
+
+    <!-- ④ 自我挑戰 -->
+    <div class="tab-content" id="tab-challenge-${L.id}">
+      <div class="section-label"><span class="step-badge">④</span> 自我挑戰（自己從空白開始寫）</div>
+      <div class="hint-box">🎯 ${escHtml(L.challenge_hint)}</div>
+      <div class="input-section">
+        <div class="input-label">📥 測試輸入</div>
+        <textarea class="code-input" id="stdin-chal-${L.id}" rows="3">${escHtml(L.default_input)}</textarea>
+      </div>
+      <div class="code-card">
+        <div class="code-topbar">
+          <div class="mac-dots">
+            <div class="mac-dot mac-dot-r"></div>
+            <div class="mac-dot mac-dot-y"></div>
+            <div class="mac-dot mac-dot-g"></div>
+          </div>
+          <span class="code-fname">challenge_${L.id}.py</span>
+          <div class="code-actions">
+            <button class="btn btn-ghost" onclick="clearChallenge('${L.id}')">清除</button>
+            <button class="btn btn-done" onclick="markDone('${L.id}')">✓ 完成</button>
+            <button class="btn btn-run" id="btn-chal-${L.id}" onclick="runChallenge('${L.id}')">${RUN_ICON} 執行</button>
+          </div>
+        </div>
+        <textarea class="code-input challenge-editor" id="chal-${L.id}" placeholder="在這裡寫你的程式..."></textarea>
+        <div class="output-wrap" id="out-wrap-chal-${L.id}" style="display:none;">
+          <div class="output-header">▶ 輸出結果</div>
+          <div class="output-body empty" id="out-chal-${L.id}">（點「執行」看結果）</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>`;
+}
+
+// ── Tab 切換 ──────────────────────────────────────
+function switchTab(id, tab){
+  const body = document.getElementById('body-'+id);
+  body.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
+  body.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById(`tab-${tab}-${id}`).classList.add('active');
+  const idx = {concept:0,trace:1,fill:2,challenge:3}[tab];
+  body.querySelectorAll('.tab-btn')[idx].classList.add('active');
+}
+
+// ── 展開/收合 ─────────────────────────────────────
+function toggleCard(id){
+  const body = document.getElementById('body-'+id);
+  const hdr  = document.getElementById('hdr-'+id);
+  const btn  = hdr.querySelector('.expand-btn');
+  const isOpen = body.classList.contains('open');
+  if(isOpen){
+    body.classList.remove('open');
+    hdr.classList.remove('open');
+    btn.textContent = '展開 ▼';
+  } else {
+    body.classList.add('open');
+    hdr.classList.add('open');
+    btn.textContent = '收合 ▲';
+  }
+}
+
+function openCard(id){
+  const body = document.getElementById('body-'+id);
+  const hdr  = document.getElementById('hdr-'+id);
+  const btn  = hdr.querySelector('.expand-btn');
+  body.classList.add('open');
+  hdr.classList.add('open');
+  btn.textContent = '收合 ▲';
+}
+
+// ── 篩選 ──────────────────────────────────────────
+function filterPhase(phase, btn){
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.lesson-card').forEach(card=>{
+    if(phase==='all' || card.dataset.phase===phase){
+      card.classList.remove('hidden');
+    } else {
+      card.classList.add('hidden');
+    }
+  });
+}
+
+// ── 填空相關 ──────────────────────────────────────
+function checkBlanks(id){
+  const L = LESSONS.find(l=>l.id===id);
+  const skEl = document.getElementById('sk-'+id);
+  const blanks = skEl.querySelectorAll('.blank');
+  const answers = L.skeleton_answers || [];
+  const resultEl = document.getElementById('check-result-'+id);
+  let allFilled = true, correctCount = 0;
+  blanks.forEach((b, i)=>{
+    const val = b.textContent.trim();
+    if(!val){ allFilled = false; b.classList.add('wrong'); return; }
+    const expected = (answers[i]||'').trim();
+    if(expected && val === expected){
+      b.classList.add('correct'); b.classList.remove('wrong'); correctCount++;
+    } else if(expected){
+      b.classList.add('wrong'); b.classList.remove('correct');
+    }
+  });
+  resultEl.style.display = 'block';
+  if(!allFilled){
+    resultEl.className = 'check-result check-warn';
+    resultEl.textContent = '⚠️ 還有空格沒填！';
+  } else if(correctCount === answers.filter(a=>a).length){
+    resultEl.className = 'check-result check-ok';
+    resultEl.textContent = '✅ 所有空格填對了！按「執行」確認輸出正確。';
+  } else {
+    resultEl.className = 'check-result check-warn';
+    resultEl.textContent = `💡 還有空格不對（紅色的重新想想）。提示：${L.hint}`;
+  }
+}
+
+function resetBlanks(id){
+  const skEl = document.getElementById('sk-'+id);
+  skEl.querySelectorAll('.blank').forEach(b=>{
+    b.textContent = '';
+    b.classList.remove('correct','wrong');
+  });
+  document.querySelectorAll(`#sk-${id} .hint-popup.show`).forEach(p=>{
+    p.classList.remove('show');
+    p.previousElementSibling && p.previousElementSibling.classList.remove('shown');
+  });
+  document.getElementById('check-result-'+id).style.display = 'none';
+  const outWrap = document.getElementById('out-wrap-fill-'+id);
+  if(outWrap){ outWrap.style.display='none'; }
+}
+
+function clearChallenge(id){
+  document.getElementById('chal-'+id).value = '';
+  const outWrap = document.getElementById('out-wrap-chal-'+id);
+  if(outWrap){ outWrap.style.display='none'; }
+}
+
+function markDone(id){
+  setDone(id);
+  const si = document.getElementById('si-'+id);
+  si && si.classList.add('completed');
+}
+
+// ── 執行函式 ──────────────────────────────────────
+function showOutput(wrapId, bodyId, out, err, expectedOutput=''){
+  const wrap = document.getElementById(wrapId);
+  const body = document.getElementById(bodyId);
+  if(!wrap||!body) return;
+  wrap.style.display = 'block';
+  if(err){
+    body.className = 'output-body err';
+    body.textContent = out;
+  } else if(expectedOutput && out.trim() === expectedOutput.trim()){
+    body.className = 'output-body ok';
+    body.textContent = out + '\n\n✅ 輸出正確！';
+  } else {
+    body.className = 'output-body';
+    body.textContent = out;
+  }
+}
+
+async function runTrace(id){
+  const btn = document.getElementById(`btn-trace-${id}`);
+  btn.disabled=true; btn.innerHTML='⏳ 執行中...';
+  const L = LESSONS.find(x=>x.id===id);
+  const result = await runPython(L.trace_code, '', `out-trace-${id}`);
+  document.getElementById(`out-wrap-trace-${id}`).style.display = 'block';
+  btn.disabled=false; btn.innerHTML=`${RUN_ICON} 執行追蹤版`;
+}
+
+async function runFill(id){
+  const btn = document.getElementById(`btn-fill-${id}`);
+  btn.disabled=true; btn.innerHTML='⏳ 執行中...';
+  const L = LESSONS.find(x=>x.id===id);
+  const blanks = document.getElementById(`sk-${id}`).querySelectorAll('.blank');
+  let hasEmpty = false;
+  blanks.forEach(b=>{ if(!b.textContent.trim()) hasEmpty=true; });
+  if(hasEmpty){
+    document.getElementById(`out-wrap-fill-${id}`).style.display = 'block';
+    const body = document.getElementById(`out-fill-${id}`);
+    body.className='output-body err';
+    body.textContent='⚠️ 還有空格沒填！請先把所有框框填完再執行。';
+    btn.disabled=false; btn.innerHTML=`${RUN_ICON} 執行`;
+    return;
+  }
+  let code = L.skeleton;
+  blanks.forEach(b=>{ code = code.replace('___', b.textContent.trim()); });
+  const stdin = document.getElementById(`stdin-fill-${id}`).value;
+  const output = await runPython(code, stdin, `out-fill-${id}`);
+  document.getElementById(`out-wrap-fill-${id}`).style.display = 'block';
+  if(output !== null){
+    const body = document.getElementById(`out-fill-${id}`);
+    if(output.trim() === L.expected_output.trim()){
+      body.className='output-body ok';
+      body.textContent = output + '\n\n✅ 輸出正確！';
+    }
+  }
+  btn.disabled=false; btn.innerHTML=`${RUN_ICON} 執行`;
+}
+
+async function runChallenge(id){
+  const btn = document.getElementById(`btn-chal-${id}`);
+  btn.disabled=true; btn.innerHTML='⏳ 執行中...';
+  const L = LESSONS.find(x=>x.id===id);
+  const code = document.getElementById(`chal-${id}`).value;
+  if(!code.trim()){
+    document.getElementById(`out-wrap-chal-${id}`).style.display = 'block';
+    const body = document.getElementById(`out-chal-${id}`);
+    body.className='output-body err';
+    body.textContent='程式是空的，請先寫程式！';
+    btn.disabled=false; btn.innerHTML=`${RUN_ICON} 執行`;
+    return;
+  }
+  const stdin = document.getElementById(`stdin-chal-${id}`).value;
+  const output = await runPython(code, stdin, `out-chal-${id}`);
+  document.getElementById(`out-wrap-chal-${id}`).style.display = 'block';
+  if(output !== null){
+    const body = document.getElementById(`out-chal-${id}`);
+    if(output.trim() === L.expected_output.trim()){
+      body.className='output-body ok';
+      body.textContent = output + '\n\n✅ 輸出正確！';
+    }
+  }
+  btn.disabled=false; btn.innerHTML=`${RUN_ICON} 執行`;
+}
+
+// ── 建立側邊欄 ────────────────────────────────────
+function buildSidebar(){
+  const container = document.getElementById('sidebar-inner');
+  let currentPhase = '';
+  LESSONS.forEach(L=>{
+    if(L.phase !== currentPhase){
+      currentPhase = L.phase;
+      const ph = document.createElement('div');
+      ph.className = 'sidebar-phase';
+      ph.textContent = L.phase.replace('第','').replace('階段：','· ');
+      container.appendChild(ph);
+    }
+    const a = document.createElement('div');
+    a.className = 'sidebar-item' + (isDone(L.id)?' completed':'');
+    a.id = 'si-'+L.id;
+    a.innerHTML = `<span class="sidebar-num">${L.id}</span><span>${L.title}</span><span class="done-dot"></span>`;
+    a.onclick = ()=>{
+      document.getElementById('card-'+L.id).scrollIntoView({behavior:'smooth',block:'start'});
+      openCard(L.id);
+    };
+    container.appendChild(a);
+  });
+}
+
+// ── 初始化 ────────────────────────────────────────
+function init(){
+  const wrap = document.getElementById('lessons-wrap');
+  LESSONS.forEach(L=>{ wrap.innerHTML += buildCard(L); });
+  buildSidebar();
+  updateProgressUI();
+  document.querySelectorAll('.btn-run').forEach(b=>b.disabled=true);
+}
+
+init();
+</script>
+
+<!-- Pyodide CDN -->
+<script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"
+  onload="initPyodide()"
+  onerror="document.getElementById('pyodide-status').textContent='✗ 無法載入';document.getElementById('pyodide-status').className='error';document.getElementById('loading-msg').textContent='無法連接 CDN，請確認網路';"></script>
+</body>
+</html>
